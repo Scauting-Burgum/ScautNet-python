@@ -4,7 +4,7 @@ from time import sleep
 class Filter:
     def __init__(self):
         self._alive = True
-    
+
     @property
     def alive(self):
         return self.receiving_thread.is_alive() and self.sending_thread.is_alive() and self._alive
@@ -34,10 +34,16 @@ class Pipeline(Thread):
         return self.filters[-1].receiving_thread.queue.get(timeout = timeout)
 
     def run(self):
-        while True:
-            for _filter in self.filters:
-                if not _filter.alive:
-                    for _filter in self.filters:
-                        _filter.kill()
-                    return
+        self.alive = True
+        try:
+            while True:
+                for _filter in self.filters:
+                    if not (_filter.alive and self.alive):
+                        for _filter in self.filters:
+                            _filter.kill()
+                        return
+        finally:
+            self.alive = False
 
+    def kill(self):
+        self.alive = False
