@@ -18,7 +18,7 @@ class ConnectionReceivingThread(Thread):
             except timeout:
                 if not self.connection.alive:
                     return
-            except ConnectionResetError:
+            except (ConnectionResetError, ConnectionAbortedError):
                 return
 
 class ConnectionSendingThread(Thread):
@@ -36,7 +36,7 @@ class ConnectionSendingThread(Thread):
             except Empty:
                 if not self.connection.alive:
                     return
-            except ConnectionResetError:
+            except (ConnectionResetError, ConnectionAbortedError):
                 return
 
 class Connection(Filter):
@@ -49,4 +49,3 @@ class Connection(Filter):
     def kill(self):
         self.socket.close()
         super().kill()
-
