@@ -7,7 +7,7 @@ Inside the zip-file you'll find a folder, put this folder inside your project's 
 
 [releases page]: https://github.com/Scauting-Burgum/ScautNet-python/releases
 
-## Example
+## Example ***(OUTDATED)***
 In this example you'll be making a simple application that logs whatever is sent to the server.
 
 First make a new folder, then install ScautNet in there.  
