@@ -36,3 +36,6 @@ class Client(Thread):
         finally:
             self.pipeline.kill()
             self.alive = False
+
+    def kill(self):
+        self.alive = False
