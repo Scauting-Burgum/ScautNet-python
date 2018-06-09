@@ -7,97 +7,218 @@ Inside the zip-file you'll find a folder, put this folder inside your project's 
 
 [releases page]: https://github.com/Scauting-Burgum/ScautNet-python/releases
 
-## Example ***(OUTDATED)***
-In this example you'll be making a simple application that logs whatever is sent to the server.
+## Example
+In this example, you'll create a chat application.
 
-First make a new folder, then install ScautNet in there.  
-Then create a file, let's call this one `log_client.py`.
+To get started, make a folder where you'll be saving all your code.  
+Create a folder inside of this folder, call this folder "ScautNet".  
+Then take the contents of this project and put them in that folder.
+### Creating the common code
+Let's make a file called "chat.py".
 
-The first thing you'll have to do when using ScautNet is to import the parts you need;
+The first thing in this file will be a class for chat messages;
 ```python
-from ScautNet import Connection, TextFilter, Pipeline
+class Message:
+  def __init__(self, sender, content):
+    self.sender = sender
+    self.content = content
 ```
 
-You'll also need to import `socket`;
+Next, add methods for converting messages to JSON and JSON back to messages;
 ```python
-from socket import socket
+import json
+
+def message_from_json(json_):
+  return Message(**json.loads(json_))
+
+def message_to_json(message):
+  return json.dumps({'sender':message.sender, 'content':message.content})
 ```
 
-Now we can start making an application,  
-first you'll want to prompt the user for the server's hostname and port;
+Now we'll create a class to receive messages;
 ```python
-hostname = input("Server hostname:")
-port = int(input("Server port:"))
-```
-
-Now you can create a socket, set a timeout, and connect to the server;
-```python
-my_socket = socket()
-my_socket.settimeout(1)
-my_socket.connect((hostname, port))
-```
-**Always set a timeout on your sockets when using ScautNet, error handling doesn't function properly if you don't.**
-
-Alright, now you can start using ScautNet;
-```python
-connection = Connection(my_socket)
-text_filter = TextFilter()
-pipeline = Pipeline(connection, text_filter)
-pipeline.start()
-```
-
-Now you'll just have to take some user input and send it to the server;
-```python
-try:
-  while True:
-    message = input("Message:")
-    pipeline.push(message)
-finally:
-  my_socket.close()
-```
-
-Okay, you've created a client, now make another file, call this one `log_server.py`.  
-The first lines will actually be exactly the same, although we do need two more imports;
-```python
-from ScautNet import Connection, TextFilter, Pipeline
-
-from socket import socket
-
 from threading import Thread
+from queue import Queue, Empty
 
-from queue import Empty
-```
+class MessageFilterReceivingThread(Thread):
+  def __init__(self, message_filter):
+    super().__init__()
+    self.message_filter = message_filter
+    self.queue = Queue()
 
-Now, you can set up a server socket;
-```python
-server_socket = socket()
-
-port = int(input("Port:"))
-server_socket.bind(("localhost", port))
-
-server_socket.listen(5)
-```
-
-Now you'll need to make a while loop that will keep receiving connections, and make pipelines for each client and then print out all messages that get received;
-```python
-try:
-  while True:
-    client_socket, client_address = server_socket.accept()
-
-    connection = Connection(client_socket)
-    text_filter = TextFilter()
-    pipeline = Pipeline(connection, text_filter)
-    pipeline.start()
-
-    def log():
-      while True:
+  def run(self):
+    previous_filter = self.message_filter.pipeline.filters[self.message_filter.index - 1]
+    while True:
+      json = None
+      while json is None:
         try:
-          print(pipeline.pull(timeout=1))
+          json = previous_filter.receiving_thread.queue.get(timeout = 1)
         except Empty:
-          if not pipeline.filters[-1].alive:
+          if not self.message_filter.alive:
             return
 
-    Thread(target=log).start()
-finally:
-  server_socket.close()
+      message = message_from_json(json)
+      self.queue.put(message)
 ```
+
+We'll also need a class to send messages;
+```python
+class MessageFilterSendingThread(Thread):
+  def __init__(self, message_filter):
+    super().__init__()
+    self.message_filter = message_filter
+    self.queue = Queue()
+
+  def run(self):
+    previous_filter = self.message_filter.pipeline.filters[self.message_filter.index - 1]
+    while True:
+      message = None
+      while message is None:
+        try:
+          message = self.queue.get(timeout = 1)
+        except Empty:
+          if not self.message_filter.alive:
+            return
+      json = message_to_json(message)
+      previous_filter.receiving_thread.queue.put(json)
+```
+
+Now we can combine these classes into a filter;
+```python
+from ScautNet import Filter
+
+class MessageFilter(Filter):
+  def __init__(self):
+    super().__init__()
+    self.receiving_thread = MessageFilterReceivingThread(self)
+    self.sending_thread = MessageFilterSendingThread(self)
+```
+
+### Server
+Now it's time to create a server, to do this, first create a file called "server.py".
+
+We'll start by making a class which forwards any message to all clients;
+```python
+from threading import Thread
+from queue import Empty
+
+class ChatServerHandler(Thread):
+  def __init__(self, server):
+    super().__init__()
+    self.server = server
+
+  def run(self):
+    while self.server.alive:
+      with self.server.pipelines_lock:
+        for pipeline in self.server.pipelines:
+          try:
+            message = pipeline.pull(timeout=0.2)
+          except Empty:
+            pass
+          else:
+            for pipeline_ in self.server.pipelines:
+              pipeline_.push(message)
+```
+
+Now we'll have to create a server class;
+```python
+from ScautNet import Server, Connection, TextFilter, Pipeline
+from chat import MessageFilter
+
+class ChatServer(Server):
+  def get_pipeline(self, socket):
+    connection = Connection(socket)
+    text_filter = TextFilter()
+    message_filter = MessageFilter()
+    return Pipeline(connection, text_filter, message_filter)
+```
+
+Now we just have to start the server!
+```python
+hostname = "localhost"
+port = 5000
+
+server = ChatServer(hostname, port)
+server_handler = ChatServerHandler(server)
+
+server.start()
+
+while not server.alive:
+  pass
+
+server_handler.start()
+```
+### Client
+For the client we'll make another file, call this file "client.py".
+
+Again, we'll create classes to handle our logic, but in this case we'll need to make two separate classes;
+```python
+from threading import Thread
+from queue import Empty
+from chat import Message
+
+class ChatClientReceivingHandler(Thread):
+  def __init__(self, client):
+    super().__init__()
+    self.client = client
+
+  def run(self):
+    while self.client.alive:
+      try:
+        message = self.client.pipeline.pull(timeout=1)
+      except Empty:
+        pass
+      else:
+        print("<{}> {}".format(message.sender, message.content))
+
+class ChatClientSendingHandler(Thread):
+  def __init__(self, client, sender):
+    super().__init__()
+    self.client = client
+    self.sender = sender
+
+  def run(self):
+    while self.client.alive:
+      try:
+        content = input()
+        message = Message(self.sender, content)
+        self.client.pipeline.push(message)
+      except KeyboardInterrupt:
+        self.client.kill()
+        return
+```
+
+Now we'll need a client class;
+```python
+from ScautNet import Client, Connection, TextFilter, Pipeline
+from chat import MessageFilter
+
+class ChatClient(Client):
+  def get_pipeline(self):
+    connection = Connection(self.socket)
+    text_filter = TextFilter()
+    message_filter = MessageFilter()
+    return Pipeline(connection, text_filter, message_filter)
+```
+
+After this we can start the client;
+```python
+hostname = input("Hostname:")
+port = int(input("Port:"))
+
+nickname = input("Nickname:")
+
+client = ChatClient(hostname, port)
+client_receiving_handler = ChatClientReceivingHandler(client)
+client_sending_handler = ChatClientSendingHandler(client, nickname)
+
+client.start()
+
+while not client.alive:
+  pass
+
+client_receiving_handler.start()
+client_sending_handler.start()
+```
+
+That's it, now just start the server, start some clients, and voila; you've made a chat application!
