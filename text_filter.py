@@ -1,4 +1,4 @@
-from pipeline import Filter
+from . import pipeline
 from threading import Thread
 from queue import Queue, Empty
 
@@ -59,7 +59,7 @@ class TextFilterSendingThread(Thread):
             previous_filter.sending_thread.queue.put(
                 b''.join([length_bytes, content_bytes]))
 
-class TextFilter(Filter):
+class TextFilter(pipeline.Filter):
     def __init__(self):
         super().__init__()
         self.sending_thread = TextFilterSendingThread(self)

@@ -1,4 +1,4 @@
-from pipeline import Pipeline, Filter
+from . import pipeline
 from threading import Thread
 from socket import timeout
 from queue import Queue, Empty
@@ -39,7 +39,7 @@ class ConnectionSendingThread(Thread):
             except (ConnectionResetError, ConnectionAbortedError):
                 return
 
-class Connection(Filter):
+class Connection(pipeline.Filter):
     def __init__(self, socket):
         super().__init__()
         self.socket = socket

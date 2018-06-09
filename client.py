@@ -1,7 +1,7 @@
+from . import connection
+from . import pipeline
 from threading import Thread
 from socket import socket
-from connection import Connection
-from pipeline import Pipeline
 
 class Client(Thread):
     def __init__(self, hostname, port):
@@ -11,8 +11,8 @@ class Client(Thread):
         self.alive = False
 
     def get_pipeline(self):
-        connection = Connection(self.socket)
-        pipeline = Pipeline(connection)
+        connection = connection.Connection(self.socket)
+        pipeline = pipeline.Pipeline(connection)
         return pipeline
 
     @property
