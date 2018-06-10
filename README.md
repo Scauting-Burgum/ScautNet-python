@@ -144,9 +144,6 @@ server_handler = ChatServerHandler(server)
 
 server.start()
 
-while not server.alive:
-  pass
-
 server_handler.start()
 ```
 ### Client
@@ -214,9 +211,6 @@ client_receiving_handler = ChatClientReceivingHandler(client)
 client_sending_handler = ChatClientSendingHandler(client, nickname)
 
 client.start()
-
-while not client.alive:
-  pass
 
 client_receiving_handler.start()
 client_sending_handler.start()
