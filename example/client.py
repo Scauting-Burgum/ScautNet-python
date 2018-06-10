@@ -53,8 +53,5 @@ client_sending_handler = ChatClientSendingHandler(client, nickname)
 
 client.start()
 
-while not client.alive:
-  pass
-
 client_receiving_handler.start()
 client_sending_handler.start()
