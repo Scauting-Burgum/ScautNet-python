@@ -34,10 +34,10 @@ class Pipeline(Thread):
         self.start()
 
     def push(self, data):
-        self.filters[-1].sending_thread.queue.put(data)
+        self.filters[-1].push(data)
 
     def pull(self, timeout=1):
-        return self.filters[-1].receiving_thread.queue.get(timeout = timeout)
+        return self.filters[-1].pull(timeout = timeout)
 
     def run(self):
         self.alive = True
