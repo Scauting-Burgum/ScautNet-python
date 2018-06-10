@@ -52,7 +52,7 @@ class MessageFilterReceivingThread(Thread):
       json = None
       while json is None:
         try:
-          json = previous_filter.receiving_thread.queue.get(timeout = 1)
+          json = previous_filter.pull(timeout = 1)
         except Empty:
           if not self.message_filter.alive:
             return
@@ -79,8 +79,9 @@ class MessageFilterSendingThread(Thread):
         except Empty:
           if not self.message_filter.alive:
             return
+
       json = message_to_json(message)
-      previous_filter.receiving_thread.queue.put(json)
+      previous_filter.push(json)
 ```
 
 Now we can combine these classes into a filter;
@@ -142,9 +143,6 @@ server = ChatServer(hostname, port)
 server_handler = ChatServerHandler(server)
 
 server.start()
-
-while not server.alive:
-  pass
 
 server_handler.start()
 ```
@@ -213,9 +211,6 @@ client_receiving_handler = ChatClientReceivingHandler(client)
 client_sending_handler = ChatClientSendingHandler(client, nickname)
 
 client.start()
-
-while not client.alive:
-  pass
 
 client_receiving_handler.start()
 client_sending_handler.start()

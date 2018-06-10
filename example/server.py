@@ -36,7 +36,4 @@ server_handler = ChatServerHandler(server)
 
 server.start()
 
-while not server.alive:
-  pass
-
 server_handler.start()

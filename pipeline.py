@@ -16,9 +16,16 @@ class Filter:
         self.receiving_thread.start()
         self.sending_thread.start()
 
+    def pull(self, timeout = 1):
+        return self.receiving_thread.queue.get(timeout=1)
+
+    def push(self, data):
+        self.sending_thread.queue.put(data)
+
 class Pipeline(Thread):
     def __init__(self, *filters):
         super().__init__()
+        self._alive = True
         self.filters = filters
         for i in range(len(filters)):
             _filter = filters[i]
@@ -28,22 +35,22 @@ class Pipeline(Thread):
         self.start()
 
     def push(self, data):
-        self.filters[-1].sending_thread.queue.put(data)
+        self.filters[-1].push(data)
 
     def pull(self, timeout=1):
-        return self.filters[-1].receiving_thread.queue.get(timeout = timeout)
+        return self.filters[-1].pull(timeout = timeout)
 
     def run(self):
-        self.alive = True
-        try:
-            while True:
-                for _filter in self.filters:
-                    if not (_filter.alive and self.alive):
-                        for _filter in self.filters:
-                            _filter.kill()
-                        return
-        finally:
-            self.alive = False
+        while True:
+            for _filter in self.filters:
+                if not (_filter.alive and self.alive):
+                    for _filter in self.filters:
+                        _filter.kill()
+                    return
+
+    @property
+    def alive(self):
+        return self.is_alive() and self._alive
 
     def kill(self):
-        self.alive = False
+        self._alive = False

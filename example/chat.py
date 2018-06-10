@@ -26,7 +26,7 @@ class MessageFilterReceivingThread(Thread):
       json = None
       while json is None:
         try:
-          json = previous_filter.receiving_thread.queue.get(timeout = 1)
+          json = previous_filter.pull(timeout = 1)
         except Empty:
           if not self.message_filter.alive:
             return
@@ -52,7 +52,7 @@ class MessageFilterSendingThread(Thread):
             return
 
       json = message_to_json(message)
-      previous_filter.sending_thread.queue.put(json)
+      previous_filter.push(json)
 
 from ScautNet import Filter
 

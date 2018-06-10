@@ -15,7 +15,7 @@ class TextFilterReceivingThread(Thread):
             while len(length_bytes) < 4:
                 try:
                     length_bytes.append(previous_filter
-                                        .receiving_thread.queue.get(
+                                        .pull(
                                             timeout=1)
                                         )
                 except Empty:
@@ -56,7 +56,7 @@ class TextFilterSendingThread(Thread):
             length = len(content_bytes)
             length_bytes = length.to_bytes(4, "little")
 
-            previous_filter.sending_thread.queue.put(
+            previous_filter.push(
                 b''.join([length_bytes, content_bytes]))
 
 class TextFilter(pipeline.Filter):

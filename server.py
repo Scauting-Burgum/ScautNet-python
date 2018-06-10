@@ -9,20 +9,21 @@ class Server(Thread):
         self.port = port
         self.pipelines_lock = Lock()
         self.pipelines = set()
-        self.alive = False
+        self._alive = True
 
     def get_pipeline(self, socket):
         connection = connection.Connection(socket)
         return pipeline.Pipeline(connection)
 
-    def run(self):
+    def start(self):
         self.socket = socket()
         self.socket.settimeout(1)
         self.socket.bind((self.hostname, self.port))
         self.socket.listen(5)
+        super().start()
 
+    def run(self):
         try:
-            self.alive = True
             while True:
                 try:
                     client_socket, client_address = self.socket.accept()
@@ -37,7 +38,10 @@ class Server(Thread):
             with self.pipelines_lock:
                 for pipeline in self.pipelines:
                     pipeline.kill()
-            self.alive = False
+
+    @property
+    def alive(self):
+        return self.is_alive() and self._alive
 
     def kill(self):
-        self.alive = False
+        self._alive = False

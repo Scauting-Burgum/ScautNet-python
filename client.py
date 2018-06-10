@@ -8,34 +8,36 @@ class Client(Thread):
         super().__init__()
         self.hostname = hostname
         self.port = port
-        self.alive = False
+        self._alive = True
 
     def get_pipeline(self):
         connection = connection.Connection(self.socket)
         pipeline = pipeline.Pipeline(connection)
         return pipeline
 
-    @property
-    def sending_queue(self):
-        return self.pipeline.filters[-1].sending_thread.queue
-
-    @property
-    def receiving_queue(self):
-        return self.pipeline.filters[-1].receiving_thread.queue
-
-    def run(self):
+    def start(self):
         self.socket = socket()
         self.socket.settimeout(1)
         self.socket.connect((self.hostname, self.port))
         self.pipeline = self.get_pipeline()
-        self.alive = True
+        super().start()
 
+    def run(self):
         try:
             while self.alive and self.pipeline.alive:
                 pass
         finally:
             self.pipeline.kill()
-            self.alive = False
+
+    def push(self, data):
+        self.pipeline.push(data)
+
+    def pull(self, timeout = 1):
+        return self.pipeline.pull(timeout = timeout)
+
+    @property
+    def alive(self):
+        return self.is_alive() and self._alive
 
     def kill(self):
-        self.alive = False
+        self._alive = False
