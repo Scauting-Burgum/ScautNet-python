@@ -32,7 +32,7 @@ class Client(Thread):
     def push(self, data):
         self.pipeline.push(data)
 
-    def pull(self, timeout):
+    def pull(self, timeout = 1):
         return self.pipeline.pull(timeout = timeout)
 
     @property
