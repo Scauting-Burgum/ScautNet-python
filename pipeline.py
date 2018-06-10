@@ -16,6 +16,12 @@ class Filter:
         self.receiving_thread.start()
         self.sending_thread.start()
 
+    def pull(self, timeout = 1):
+        return self.receiving_thread.queue.get(timeout=1)
+
+    def push(self, data):
+        self.sending_thread.queue.put(data)
+
 class Pipeline(Thread):
     def __init__(self, *filters):
         super().__init__()
