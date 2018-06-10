@@ -15,14 +15,6 @@ class Client(Thread):
         pipeline = pipeline.Pipeline(connection)
         return pipeline
 
-    @property
-    def sending_queue(self):
-        return self.pipeline.filters[-1].sending_thread.queue
-
-    @property
-    def receiving_queue(self):
-        return self.pipeline.filters[-1].receiving_thread.queue
-
     def start(self):
         self.socket = socket()
         self.socket.settimeout(1)
@@ -36,6 +28,12 @@ class Client(Thread):
                 pass
         finally:
             self.pipeline.kill()
+
+    def push(self, data):
+        self.pipeline.push(data)
+
+    def pull(self, timeout):
+        return self.pipeline.pull(timeout = timeout)
 
     @property
     def alive(self):
