@@ -15,8 +15,7 @@ class TextFilterReceivingThread(Thread):
             while len(length_bytes) < 4:
                 try:
                     length_bytes.append(previous_filter
-                                        .pull(
-                                            timeout=1)
+                                        .pull()
                                         )
                 except Empty:
                     if not self.text_filter.alive:
@@ -27,8 +26,7 @@ class TextFilterReceivingThread(Thread):
             while len(content_bytes) < length:
                 try:
                     content_bytes.append(previous_filter
-                                         .receiving_thread.queue.get(
-                                             timeout=1)
+                                         .pull()
                                          )
                 except Empty:
                     if not self.text_filter.alive:
