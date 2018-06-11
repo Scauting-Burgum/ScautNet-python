@@ -1,3 +1,4 @@
+from threading import Thread
 from queue import Queue, Empty
 from . import pipeline
 
@@ -44,3 +45,6 @@ class ConversionFilter(pipeline.Filter):
         super().__init__()
         self.receiving_converter = receiving_converter
         self.sending_converter = sending_converter
+        
+        self.receiving_thread = ConversionFilterReceivingThread(self)
+        self.sending_thread = ConversionFilterSendingThread(self)
