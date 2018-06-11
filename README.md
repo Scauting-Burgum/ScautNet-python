@@ -35,64 +35,13 @@ def message_to_json(message):
   return json.dumps({'sender':message.sender, 'content':message.content})
 ```
 
-Now we'll create a class to receive messages;
+Now we'll combine these methods into a filter;
 ```python
-from threading import Thread
-from queue import Queue, Empty
+from ScautNet import ConversionFilter
 
-class MessageFilterReceivingThread(Thread):
-  def __init__(self, message_filter):
-    super().__init__()
-    self.message_filter = message_filter
-    self.queue = Queue()
-
-  def run(self):
-    previous_filter = self.message_filter.pipeline.filters[self.message_filter.index - 1]
-    while True:
-      json = None
-      while json is None:
-        try:
-          json = previous_filter.pull(timeout = 1)
-        except Empty:
-          if not self.message_filter.alive:
-            return
-
-      message = message_from_json(json)
-      self.queue.put(message)
-```
-
-We'll also need a class to send messages;
-```python
-class MessageFilterSendingThread(Thread):
-  def __init__(self, message_filter):
-    super().__init__()
-    self.message_filter = message_filter
-    self.queue = Queue()
-
-  def run(self):
-    previous_filter = self.message_filter.pipeline.filters[self.message_filter.index - 1]
-    while True:
-      message = None
-      while message is None:
-        try:
-          message = self.queue.get(timeout = 1)
-        except Empty:
-          if not self.message_filter.alive:
-            return
-
-      json = message_to_json(message)
-      previous_filter.push(json)
-```
-
-Now we can combine these classes into a filter;
-```python
-from ScautNet import Filter
-
-class MessageFilter(Filter):
+class MessageFilter(ConversionFilter):
   def __init__(self):
-    super().__init__()
-    self.receiving_thread = MessageFilterReceivingThread(self)
-    self.sending_thread = MessageFilterSendingThread(self)
+    super().__init__(message_from_json, message_to_json)
 ```
 
 ### Server
