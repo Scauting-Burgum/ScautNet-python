@@ -1,6 +1,7 @@
 from threading import Thread, Lock
 from socket import socket, timeout
-from . import connection, pipeline
+from . import connection as connection_module
+from . import pipeline as pipeline_module
 
 class Server(Thread):
     def __init__(self, hostname, port):
@@ -12,8 +13,8 @@ class Server(Thread):
         self._alive = True
 
     def get_pipeline(self, socket):
-        connection = connection.Connection(socket)
-        return pipeline.Pipeline(connection)
+        connection = connection_module.Connection(socket)
+        return pipeline_module.Pipeline(connection)
 
     def start(self):
         self.socket = socket()
