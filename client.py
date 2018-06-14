@@ -1,5 +1,5 @@
-from . import connection
-from . import pipeline
+from . import connection as connection_module
+from . import pipeline as pipeline_module
 from threading import Thread
 from socket import socket
 
@@ -11,8 +11,8 @@ class Client(Thread):
         self._alive = True
 
     def get_pipeline(self):
-        connection = connection.Connection(self.socket)
-        pipeline = pipeline.Pipeline(connection)
+        connection = connection_module.Connection(self.socket)
+        pipeline = pipeline_module.Pipeline(connection)
         return pipeline
 
     def start(self):
